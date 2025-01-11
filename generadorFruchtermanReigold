@@ -1,0 +1,108 @@
+import pygame
+import numpy as np
+
+# Parámetros generales
+WIDTH, HEIGHT = 800, 600  # Tamaño de la ventana
+NODE_RADIUS = 4          # Radio de los nodos
+ITERATIONS = 100          # Número máximo de iteraciones
+FPS = 120                  # Frames por segundo
+
+# Colores
+BACKGROUND_COLOR = (30, 30, 30)
+NODE_COLOR = (200, 100, 100)
+EDGE_COLOR = (100, 100, 200)
+
+# Inicializar Pygame
+pygame.init()
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Disposición de grafos - Algoritmo Fruchterman-Reingold")
+clock = pygame.time.Clock()
+
+# Grafo de ejemplo (lista de aristas)
+graph = [(0, 1), (0, 2), (1, 3), (2, 3), (3, 4), (4, 5), (5, 0)]
+num_nodes = 6
+
+# Inicializar posiciones de los nodos aleatoriamente
+positions = np.random.rand(num_nodes, 2) * [WIDTH, HEIGHT]
+
+# Constantes para las fuerzas
+k = np.sqrt((WIDTH * HEIGHT) / num_nodes)  # Espaciado ideal entre nodos
+temperature = WIDTH / 10                  # Temperatura inicial
+cooling_factor = temperature / ITERATIONS  # Factor de enfriamiento
+
+def repulsive_force(d):
+    """Fuerza de repulsión entre nodos."""
+    return k**2 / d if d > 0 else 0
+
+def attractive_force(d):
+    """Fuerza de atracción entre nodos conectados."""
+    return d**2 / k
+
+def fruchterman_reingold_step(positions, graph, temperature):
+    """Un paso del algoritmo Fruchterman-Reingold."""
+    forces = np.zeros_like(positions)
+
+    # Calcular fuerzas de repulsión entre todos los pares de nodos
+    for i in range(num_nodes):
+        for j in range(i + 1, num_nodes):
+            delta = positions[i] - positions[j]
+            distance = np.linalg.norm(delta)
+            if distance > 0:
+                force = repulsive_force(distance)
+                forces[i] += force * delta / distance
+                forces[j] -= force * delta / distance
+
+    # Calcular fuerzas de atracción para las aristas del grafo
+    for u, v in graph:
+        delta = positions[u] - positions[v]
+        distance = np.linalg.norm(delta)
+        if distance > 0:
+            force = attractive_force(distance)
+            forces[u] -= force * delta / distance
+            forces[v] += force * delta / distance
+
+    # Actualizar posiciones de los nodos
+    for i in range(num_nodes):
+        displacement = forces[i]
+        norm = np.linalg.norm(displacement)
+        if norm > 0:
+            positions[i] += (displacement / norm) * min(norm, temperature)
+
+    return positions
+
+# Bucle principal de visualización
+running = True
+iteration = 0
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Limpiar pantalla
+    screen.fill(BACKGROUND_COLOR)
+
+    # Dibujar aristas
+    for u, v in graph:
+        pygame.draw.line(
+            screen, EDGE_COLOR,
+            positions[u].astype(int), positions[v].astype(int), 2
+        )
+
+    # Dibujar nodos
+    for pos in positions:
+        pygame.draw.circle(screen, NODE_COLOR, pos.astype(int), NODE_RADIUS)
+
+    # Ejecutar un paso del algoritmo Fruchterman-Reingold
+    positions = fruchterman_reingold_step(positions, graph, temperature)
+
+    # Reducir la temperatura
+    temperature -= cooling_factor
+
+    # Actualizar la pantalla
+    pygame.display.flip()
+    clock.tick(FPS)
+    iteration += 1
+
+# Salir de Pygame
+pygame.quit()
