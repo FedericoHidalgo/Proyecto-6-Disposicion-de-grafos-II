@@ -8,7 +8,7 @@ radioNodo = 4
 colorArista = (200, 200, 200)
 colorNodo = (50, 150, 250)
 colorFondo = (30, 30, 30)
-reloj = pygame.time.Clock()
+reloj = pygame.time.reloj()
 FPS = 240
 
 # Algoritmo de resortes
