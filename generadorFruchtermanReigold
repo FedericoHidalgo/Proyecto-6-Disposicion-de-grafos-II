@@ -2,18 +2,18 @@ import pygame, math, random
 from generadorModelos import *
 
 # Parámetros generales
-ancho, alto = 800, 600  # Tamaño de la ventana
+ancho, alto = 1900, 1000  # Tamaño de la ventana
 radioNodo = 4          # Radio de los nodos
-iteraciones = 100          # Número máximo de iteraciones
-FPS = 120                  # Frames por segundo
+iteraciones = 1000          # Número máximo de iteraciones
+FPS = 30                  # Frames por segundo
 
 # Colores
 colorFondo = (30, 30, 30)
 colorNodo = (50, 150, 250)
 colorArista = (200, 200, 200)
 
-n=3
-modelo= modeloMalla(n,n)
+n= 20
+modelo= modeloMalla(n,20)
 # Obtenemos los nodos y aristas del modelo
 nodos = []
 aristas = []
@@ -39,13 +39,13 @@ def posicionesIniciales(g, ancho, alto):
     """"
     Obtiene las posiciones iniciales de los nodos
     """
-    posiciones = {nodo: (random.randint(50, ancho - 50), random.randint(50, alto - 50))\
-                  for nodo in g["nodos"]}
+    posiciones = {nodo: (random.randint(50, ancho - 50), random.randint(50, alto - 50)) for nodo in g["nodos"]}
+       
     return posiciones
 
 # Constantes para las fuerzas
-k = math.sqrt((ancho * alto) / len(g["nodos"]))  # Espaciado ideal entre nodos
-temperatura = ancho / 10                 # Temperatura inicial
+k = math.sqrt((ancho * alto) / len(g["nodos"])/4)/4  # Espaciado ideal entre nodos
+temperatura = ancho / 100                 # Temperatura inicial
 factorEnf = temperatura / iteraciones  # Factor de enfriamiento
 
 def distanciaEuclidiana(pos1,pos2):
@@ -53,7 +53,7 @@ def distanciaEuclidiana(pos1,pos2):
     Calcula la distancia euclidiana entre dos puntos
     """
     dx = pos1[0] - pos2[0]
-    dy = pos1[1] - pos1[1]
+    dy = pos1[1] - pos2[1]
     return math.sqrt(dx**2 + dy**2)
 
 def fuerzaRepulsiva(d):
@@ -82,14 +82,10 @@ def fruchterman_reingold_step(posiciones, g, temperatura):
                 deltaY = posiciones[n1][1] - posiciones[n2][1]
                 distancia = distanciaEuclidiana(posiciones[n1], posiciones[n2])
                 fuerza = fuerzaRepulsiva(distancia)
-                #print(f"Distancia: {distancia}, \tFuerza: {fuerza}")
                 if distancia > 0:
-                    #print(f"Fuerzas 1: {fuerzas[n1]}")
                     fuerzas[n1][0] += (deltaX / distancia) * fuerza
-                    fuerzas[n1][1] += (deltaY / distancia) * fuerza
-                    #print(f"Fuerzas 2: {fuerzas[n1]}")
-                
-                    
+                    fuerzas[n1][1] += (deltaY / distancia) * fuerza       
+    print("\n\n")             
     # Calcular fuerzas de atracción para las aristas del grafo
     for e in g["aristas"]:
         n1, n2 = e
@@ -97,12 +93,14 @@ def fruchterman_reingold_step(posiciones, g, temperatura):
         deltaY = posiciones[n1][1] - posiciones[n2][1]
         distancia = distanciaEuclidiana(posiciones[n1], posiciones[n2])
         fuerza = fuerzaAtractiva(distancia)
+        #print(f"Arista: {n1}-{n2} \tD: {distancia}, \tF: {fuerza}")
         if distancia > 0:
             fuerzas[n1][0] -= (deltaX / distancia) * fuerza
             fuerzas[n1][1] -= (deltaY / distancia) * fuerza
             fuerzas[n2][0] += (deltaX / distancia) * fuerza
             fuerzas[n2][1] += (deltaY / distancia) * fuerza
-    
+        #print(f"Fzs {n1}: {fuerzas[n1]}, Fzs {n2}: {fuerzas[n2]}")
+    print("\n\n")
     # Actualizar posiciones de los nodos
     for n in g["nodos"]:
         despX = fuerzas[n][0]
@@ -115,7 +113,8 @@ def fruchterman_reingold_step(posiciones, g, temperatura):
             #posY = posiciones[n][1] + (despY / desp) * min(desp, temperatura)
         posiciones[n] = (min(ancho-25, max(25, posiciones[n][0] )),\
                         min(alto-25, max(25, posiciones[n][1])))
-        
+        #print(f"Posición {n} X,Y: {posiciones[n][0]}, {posiciones[n][1]}")
+
     return posiciones
 
 # Bucle principal de visualización
