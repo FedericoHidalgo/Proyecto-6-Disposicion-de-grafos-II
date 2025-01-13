@@ -1,4 +1,4 @@
-from generadosSpring import *
+from generadorFruchtermanReingold import *
 
-#Ejecuta la función main() del generador de resortes Spring
-main()
+#Ejecuta la función Fruchterman Reingold para la visualización de nodos
+modeloFruchtermanReingold()

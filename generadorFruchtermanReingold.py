@@ -6,47 +6,23 @@ ancho, alto = 1900, 1000  # Tamaño de la ventana
 radioNodo = 4          # Radio de los nodos
 iteraciones = 1000          # Número máximo de iteraciones
 FPS = 30                  # Frames por segundo
+reloj = pygame.time.Clock()
+pantalla = pygame.display.set_mode((ancho, alto))
 
 # Colores
 colorFondo = (30, 30, 30)
 colorNodo = (50, 150, 250)
 colorArista = (200, 200, 200)
 
-n= 20
-modelo= modeloMalla(n,20)
-# Obtenemos los nodos y aristas del modelo
-nodos = []
-aristas = []
-for i in modelo.nodos.values():
-    nodos.append(i)
-
-for i in modelo.aristas.values():
-    e = modelo.nodoVecino(i)
-    aristas.append(e)
-# Creamos el grafo
-g = {
-    "nodos": nodos,
-    "aristas": aristas,
-}
-# Inicializar Pygame
-pygame.init()
-pantalla = pygame.display.set_mode((ancho, alto))
-pygame.display.set_caption("Disposición de grafos - Algoritmo Fruchterman-Reingold")
-reloj = pygame.time.Clock()
-
 # Inicializar posiciones de los nodos aleatoriamente
 def posicionesIniciales(g, ancho, alto):
     """"
     Obtiene las posiciones iniciales de los nodos
     """
-    posiciones = {nodo: (random.randint(50, ancho - 50), random.randint(50, alto - 50)) for nodo in g["nodos"]}
+    posiciones = {nodo: (random.randint(50, ancho - 50),\
+                         random.randint(50, alto - 50)) for nodo in g["nodos"]}
        
     return posiciones
-
-# Constantes para las fuerzas
-k = math.sqrt((ancho * alto) / len(g["nodos"])/4)/4  # Espaciado ideal entre nodos
-temperatura = ancho / 100                 # Temperatura inicial
-factorEnf = temperatura / iteraciones  # Factor de enfriamiento
 
 def distanciaEuclidiana(pos1,pos2):
     """
@@ -56,20 +32,20 @@ def distanciaEuclidiana(pos1,pos2):
     dy = pos1[1] - pos2[1]
     return math.sqrt(dx**2 + dy**2)
 
-def fuerzaRepulsiva(d):
+def fuerzaRepulsiva(d, k):
     """
     Calcula la fuerza de repulsión entre dos nodos
     """
     return k**2 / d if d > 0 else 0
 
-def fuerzaAtractiva(d):
+def fuerzaAtractiva(d, k):
     """
     Calcula la fuerza de atracción entre dos nodos 
     conectados por una arista
     """
     return d**2 / k
 
-def fruchterman_reingold_step(posiciones, g, temperatura):
+def fruchtermanReingold(posiciones, g, temperatura, k):
     """
     Método Fruchterman Reingold para la visualización de grafos
     """
@@ -81,26 +57,23 @@ def fruchterman_reingold_step(posiciones, g, temperatura):
                 deltaX = posiciones[n1][0] - posiciones[n2][0]
                 deltaY = posiciones[n1][1] - posiciones[n2][1]
                 distancia = distanciaEuclidiana(posiciones[n1], posiciones[n2])
-                fuerza = fuerzaRepulsiva(distancia)
+                fuerza = fuerzaRepulsiva(distancia, k)
                 if distancia > 0:
                     fuerzas[n1][0] += (deltaX / distancia) * fuerza
                     fuerzas[n1][1] += (deltaY / distancia) * fuerza       
-    print("\n\n")             
+            
     # Calcular fuerzas de atracción para las aristas del grafo
     for e in g["aristas"]:
         n1, n2 = e
         deltaX = posiciones[n1][0] - posiciones[n2][0]
         deltaY = posiciones[n1][1] - posiciones[n2][1]
         distancia = distanciaEuclidiana(posiciones[n1], posiciones[n2])
-        fuerza = fuerzaAtractiva(distancia)
-        #print(f"Arista: {n1}-{n2} \tD: {distancia}, \tF: {fuerza}")
+        fuerza = fuerzaAtractiva(distancia, k)
         if distancia > 0:
             fuerzas[n1][0] -= (deltaX / distancia) * fuerza
             fuerzas[n1][1] -= (deltaY / distancia) * fuerza
             fuerzas[n2][0] += (deltaX / distancia) * fuerza
             fuerzas[n2][1] += (deltaY / distancia) * fuerza
-        #print(f"Fzs {n1}: {fuerzas[n1]}, Fzs {n2}: {fuerzas[n2]}")
-    print("\n\n")
     # Actualizar posiciones de los nodos
     for n in g["nodos"]:
         despX = fuerzas[n][0]
@@ -109,54 +82,78 @@ def fruchterman_reingold_step(posiciones, g, temperatura):
         if desp > 0:
             posiciones[n] = ((posiciones[n][0] + (despX / desp) * min(desp, temperatura)),\
                             (posiciones[n][1] + (despY / desp) * min(desp, temperatura)))
-            #posX = posiciones[n][0] + (despX / desp) * min(desp, temperatura)
-            #posY = posiciones[n][1] + (despY / desp) * min(desp, temperatura)
         posiciones[n] = (min(ancho-25, max(25, posiciones[n][0] )),\
                         min(alto-25, max(25, posiciones[n][1])))
-        #print(f"Posición {n} X,Y: {posiciones[n][0]}, {posiciones[n][1]}")
-
+    #Imprimir grafo en pantalla
+    actualizarPantalla(pantalla, g, posiciones)
+    
     return posiciones
 
-# Bucle principal de visualización
-running = True
-iteration = 0
-posiciones = posicionesIniciales(g, ancho, alto)
-
-while running and iteration < iteraciones:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    # Limpiar pantalla
+# Dibujar grafo con Pygame
+def actualizarPantalla(pantalla, g, posiciones):
     pantalla.fill(colorFondo)
-
     # Dibujar aristas
     for e in g["aristas"]:
         n1, n2 = e
         pygame.draw.line(pantalla, colorArista, posiciones[n1], posiciones[n2], 2)
-
+    
     # Dibujar nodos
     for pos in posiciones.values():
         pygame.draw.circle(pantalla, colorNodo, (int(pos[0]), int(pos[1])), radioNodo)
 
-    # Ejecutar un paso del algoritmo Fruchterman-Reingold
-    posiciones = fruchterman_reingold_step(posiciones, g, temperatura)
-
-    # Reducir la temperatura
-    temperatura -= factorEnf
-
-    # Actualizar la pantalla
     pygame.display.flip()
     reloj.tick(FPS)
-    iteration += 1
 
-# Salir de Pygame
-pygame.quit()
-"""
-# Obtenemos las posiciones iniciales de los nodos
-posiciones = posicionesIniciales(g, ancho, alto)
-#posiciones['1'] = (1, 1)
-#print(posiciones)
-p= fruchterman_reingold_step(posiciones, g, temperatura)
-print(p)
-"""
+def modeloFruchtermanReingold():
+    """
+    Ejecutar el modelo Fruchterman Reingold
+    """
+    # Inicializar Pygame
+    pygame.init()
+    pygame.display.set_caption("Disposición de grafos - Algoritmo Fruchterman-Reingold")
+
+    # Bucle principal de visualización
+    ejecucion = True
+    bandera = 0
+    #Modelo de grafo
+    n= 10
+    modelo= modeloMalla(n,n)
+    # Obtenemos los nodos y aristas del modelo
+    nodos = []
+    aristas = []
+    for i in modelo.nodos.values():
+        nodos.append(i)
+    for i in modelo.aristas.values():
+        e = modelo.nodoVecino(i)
+        aristas.append(e)
+    # Creamos el grafo
+    g = {
+        "nodos": nodos,
+        "aristas": aristas,
+    }
+    # Obtenemos las posiciones iniciales de los nodos
+    posiciones = posicionesIniciales(g, ancho, alto)
+    # Constantes para las fuerzas
+    k = math.sqrt((ancho * alto) / len(g["nodos"])/4)/2  # Espaciado ideal entre nodos
+    temperatura = ancho / 100                 # Temperatura inicial
+    factorEnf = temperatura / iteraciones  # Factor de enfriamiento
+
+
+    while ejecucion and bandera < iteraciones:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                ejecucion = False
+
+        # Ejecutar un paso del algoritmo Fruchterman-Reingold
+        posiciones = fruchtermanReingold(posiciones, g, temperatura, k)
+
+        # Reducir la temperatura
+        temperatura -= factorEnf
+
+        # Actualizar la pantalla
+        pygame.display.flip()
+        reloj.tick(FPS)
+        bandera += 1
+
+    # Salir de Pygame
+    pygame.quit()
